@@ -23,7 +23,7 @@ for (const [name,width,height] of [['desktop',1440,900],['mobile',390,844],['m39
    // a tile can sit at opacity 1 and still be halfway across the copy, so
    // composition is judged on geometry
    const tiles=[...document.querySelectorAll('.history-frame,.shot-frame')].filter(visible);
-   const bottom=[...document.querySelectorAll('.film-bottom,.sample-disclaimer')].filter(visible);
+   const bottom=[...document.querySelectorAll('.film-bottom')].filter(visible);
    const strays=[];
    for(const t of tiles){const b=box(t);
      if(b.right<-2||b.x>innerWidth+2||b.bottom<-2||b.y>innerHeight+2)strays.push(['outOfFrame',t.className]);

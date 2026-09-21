@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import FilmWaitlist from "@/components/film-waitlist";
 
 // The selected experiment written as an edit. The hook is Ad A's, kept
@@ -49,6 +49,19 @@ const compared: Ad[] = [
 const clock = (sec: number) => `0:${String(sec).padStart(2, "0")}`;
 // Customer language, read after the performance reading and never instead of it.
 const questions = ["How do I use it?", "Do I need to set it up?", "I wish they showed how it works."];
+// One question at a time, on a clock of its own. The scroll timeline only
+// fades the line in and out, so the two can never fight. Every line stays in
+// the same grid cell, which reserves the tallest one's height: no layout jump.
+function CustomerQuestion() {
+  const [on, setOn] = useState(0);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = setInterval(() => { if (!document.hidden) setOn(n => (n + 1) % questions.length); }, 3200);
+    return () => clearInterval(timer);
+  }, []);
+  const out = (on + questions.length - 1) % questions.length;
+  return <blockquote>{questions.map((q, i) => <span key={q} data-state={i === on ? "on" : i === out ? "out" : undefined}>{q}</span>)}</blockquote>;
+}
 // Three executions of the one hypothesis Phase 1 earned. Each changes when
 // the mechanism is explained; they differ in how much of the proven ad they
 // keep. Bet 01 inherits Ad A's opening, so it starts from A's own 0:09 mark.
@@ -114,7 +127,7 @@ export default function ResistiveFilm() {
       <section ref={sequence} className="film-sequence" id="top" aria-label="How Resistive works">
         <div className="film-stage">
           <div className="narrative-stack">
-            <section className="narrative n-premise" data-start="0" data-end="8"><span className="premise-eyebrow">Introducing Resistive</span><h1>Know what deserves<br />to be tested next.</h1><p>Resistive learns from your ads, forms the next bets, and makes the creative to test them.</p><a href="#understand" className="text-link">See how it works</a><span className="premise-foot">Illustrative sample creative</span></section>
+            <section className="narrative n-premise" data-start="0" data-end="8"><span className="premise-eyebrow">Introducing Resistive</span><h1>Know what deserves{" "}<br />to be tested next.</h1><p>Resistive learns from your ads, forms the next bets, and makes the creative to test them.</p><a href="#understand" className="text-link">See how it works</a></section>
             <section className="narrative n-history" data-start="8" data-end="17"><h2>Every ad has already<br />taught you something.</h2><p>One product, many creative decisions. Resistive reads the library as experiments, not as files.</p></section>
             <section id="understand" className="narrative n-inside" data-start="17" data-end="29"><h2>It reads the ad<br />second by second.</h2><p>What is on screen at each moment, and how many people are still watching when it gets there.</p></section>
             <section className="narrative n-compare" data-start="29" data-end="38"><h2>Attention is only<br />part of the result.</h2><p>One ad can be chance. Resistive compares the creative decisions behind several.</p></section>
@@ -126,7 +139,8 @@ export default function ResistiveFilm() {
             <section id="create" className="narrative n-reveal" data-start="73" data-end="77"><h2>It makes the ads.</h2></section>
             <section className="narrative n-production" data-start="79" data-end="84"><h2>The experiment<br />becomes a brief.</h2><p>Every line of it comes from what the analysis already found.</p></section>
             <section className="narrative n-shots" data-start="84" data-end="94"><h2>Every line<br />becomes a shot.</h2><p>Five beats, timed to the hypothesis, storyboarded against your own product.</p></section>
-            <section className="narrative n-generate" data-start="94" data-end="99"><h2>Then it makes<br />the shots.</h2><p>Each frame resolves into footage built around the product you already sell.</p></section>\n            <section className="narrative n-qa" data-start="99" data-end="106"><h2>And checks<br />its own work.</h2><p>One shot does not match the product. Resistive rejects it and replaces it.</p></section>
+            <section className="narrative n-generate" data-start="94" data-end="99"><h2>Then it makes<br />the shots.</h2><p>Each frame resolves into footage built around the product you already sell.</p></section>
+            <section className="narrative n-qa" data-start="99" data-end="106"><h2>And checks<br />its own work.</h2><p>One shot does not match the product. Resistive rejects it and replaces it.</p></section>
             <section className="narrative n-edit" data-start="106" data-end="112"><h2>Bring it<br />all together.</h2><p>Approved shots, voice, captions and music on one timeline.</p></section>
             <section className="narrative n-finished" data-start="112" data-end="119"><h2>Your next test,<br />ready to run.</h2><p>One finished vertical ad, built from the hypothesis it came out of.</p><button className="text-link replay-ad" type="button">Play sample ad</button></section>
             <section className="narrative n-market" data-start="119" data-end="126"><h2>The market<br />is the final judge.</h2><p>Resistive states what it expects before launch, then lets the result answer.</p></section>
@@ -173,7 +187,7 @@ export default function ResistiveFilm() {
             <p className="an-source">Same product, same audience, same reporting window. Illustrative demo data.</p>
             <p className="an-line">The stronger-converting creatives explain the product earlier.</p>
             <p className="an-qual">A pattern across three ads in one sample. Not proof of cause.</p>
-            <div className="an-qs">{questions.map(q => <blockquote key={q}>{q}</blockquote>)}</div>
+            <div className="an-qs"><CustomerQuestion /></div>
             <p className="an-note">Customers understand the promise. They still ask how it works.</p>
           </div>
           <div className="hypothesis visual-layer" aria-hidden="true">
@@ -263,7 +277,7 @@ export default function ResistiveFilm() {
             <p className="rs-line">The Creative R&amp;D Engine for performance brands.</p>
             <p className="rs-sub">Learn from every ad. Build better ones next.</p>
           </div>
-          <div className="film-bottom"><span className="sample-disclaimer">Illustrative demo. Sample product, reviews and results.</span><span className="beat-label" /></div>
+          <div className="film-bottom"><span className="beat-label" /></div>
           <div className="film-progress" aria-hidden="true"><i /></div>
           {process.env.NODE_ENV === "development" && <output className="motion-hud" hidden />}
         </div>

@@ -26,11 +26,33 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
     let w = 0, h = 0, sw = 0, sh = 0, fw = 0, fh = 0, aw = 0, ah = 0;
+    // A phone composes each scene under the copy it has to clear, so these are
+    // measured from the laid-out headlines rather than guessed as fractions.
+    const GAP = 6;
+    let heroFloor = 0, wallTop = 0, wallLeft = 0, boardTop = 0, stripTop = 0, finalTop = 0, shelfTop = 0, shelfW = 0;
+    const bottomOf = (selector: string) => { const el = root.querySelector<HTMLElement>(selector)!; return el.offsetTop + el.offsetHeight; };
     const measure = () => {
       w = stage.clientWidth; h = stage.clientHeight;
       sw = mobile ? Math.min(w * .37, h * .22) : Math.min(w * .18, h * .31);
       sh = sw * 16 / 9;
-      fw = mobile ? w * .14 : Math.min(w * .068, h * .108); fh = fw * 16 / 9;
+      if (mobile) {
+        heroFloor = bottomOf(".n-premise") + h * .03;
+        // the library wall: a centred 4 × 4 grid filling what the headline leaves
+        wallTop = Math.max(h * .3, bottomOf(".n-history") + h * .035);
+        fw = Math.min((w * .88 - 3 * GAP) / 4, (h * .96 - wallTop - 3 * GAP) / 4 * 9 / 16);
+        wallLeft = (w - 4 * fw - 3 * GAP) / 2;
+        boardTop = Math.max(h * .36, bottomOf(".n-shots") + h * .035);
+        // the edit strip spans the text column; the tracks follow it
+        stripTop = Math.max(h * .36, bottomOf(".n-edit") + h * .03);
+        stage.style.setProperty("--strip-end", `${stripTop + (w * .88 - 4 * GAP) / 5 * 16 / 9}px`);
+        finalTop = bottomOf(".n-finished") + h * .025;
+        stage.style.setProperty("--final-y", `${finalTop}px`);
+        // the returning library: six across, three rows, above the model note
+        shelfTop = Math.max(h * .3, bottomOf(".n-model") + h * .035);
+        shelfW = Math.min((w * .88 - 5 * GAP) / 6, h * .1 * 9 / 16);
+        stage.style.setProperty("--shelf-end", `${shelfTop + 3 * shelfW * 16 / 9 + 2 * GAP}px`);
+      } else fw = Math.min(w * .068, h * .108);
+      fh = fw * 16 / 9;
       stage.style.setProperty("--shot-w", `${sw}px`); stage.style.setProperty("--shot-h", `${sh}px`);
       stage.style.setProperty("--frame-w", `${fw}px`); stage.style.setProperty("--frame-h", `${fh}px`);
       stage.style.setProperty("--run-h", `${fh * (mobile ? .30 : .30)}px`);
@@ -88,7 +110,6 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     });
     const enter = (target: gsap.TweenTarget, start: number, duration = 1.5) => master.fromTo(target, { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration, immediateRender: false, ease: "expo.out" }, start);
     const leave = (target: gsap.TweenTarget, at: number, duration = .9) => master.to(target, { autoAlpha: 0, y: -16, duration, ease: "power2.in" }, at).set(target, { autoAlpha: 0 }, at + duration);
-    master.set(select(".sample-disclaimer"), { visibility: "visible" }, 8);
     gsap.set(select(".cmp-row, .cmp-out > span, .an-line, .an-qual, .an-qs blockquote, .an-note, .hypo-why > div, .hypo-next"), { autoAlpha: 0 });
     gsap.set(select(".cmp-track i"), { backgroundColor: "#7a7f88" });
     gsap.set(select(".bet"), { autoAlpha: 0 });
@@ -102,28 +123,36 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     // library, held near the camera, which recedes into its exact final slot
     // while the rest of the wall comes forward. First statement of the motion
     // grammar: objects survive transitions.
-    const cols = mobile ? 4 : 6;
-    const wall = (i: number) => ({
-      x: (mobile ? w * .07 : w * .50) + (i % cols) * fw * 1.13,
-      y: (mobile ? h * .42 : h * .18) + Math.floor(i / cols) * fh * 1.1,
-    });
+    const wall = (i: number) => mobile
+      ? { x: wallLeft + (i % 4) * (fw + GAP), y: wallTop + Math.floor(i / 4) * (fh + GAP) }
+      : { x: w * .50 + (i % 6) * fw * 1.13, y: h * .18 + Math.floor(i / 6) * fh * 1.1 };
     const wave = (i: number) => Math.floor(i / 4) * .5;
     // Opening frame: the brand's creative history drifting at depth behind the
     // headline. Two ads sit forward and readable so the formats are legible;
     // the rest are atmosphere. Every one is a real tile that resolves into the
     // wall, not a decorative duplicate.
     const FORWARD = mobile ? [1, 14] : [0, 14];
+    // phone: [x, depth within the band under the copy, rotation, scale]
     const placed: Record<number, [number, number, number, number]> = mobile
-      ? { 1: [.24, .69, -7, .9], 14: [.76, .87, 6, .9] }
+      ? { 1: [.27, .22, -7, .78], 14: [.73, .82, 6, .78] }
       : { 0: [.13, .13, -7, 1], 14: [.87, .84, 6, 1] };
     const drift = (i: number) => {
       const set = placed[i];
-      if (set) return { x: w * set[0] - fw / 2, y: h * set[1] - fh / 2, rot: set[2], scale: set[3] };
       const a = Math.sin(i * 12.9898) * 43758.5453;
       const b = Math.sin(i * 78.233) * 12345.6789;
       const ra = a - Math.floor(a), rb = b - Math.floor(b);
+      // A phone has no room beside the headline, so the library drifts in the
+      // band under the copy and the headline keeps clean black behind it.
+      if (mobile) {
+        const scale = set ? set[3] : .5 + rb * .3;
+        const room = Math.max(0, h * .97 - heroFloor - fh * scale);
+        return { x: w * (set ? set[0] : .5 + (ra - .5) * .7) - fw / 2,
+          y: heroFloor + (set ? set[1] : rb) * room - fh * (1 - scale) / 2,
+          rot: set ? set[2] : (ra - .5) * 17, scale };
+      }
+      if (set) return { x: w * set[0] - fw / 2, y: h * set[1] - fh / 2, rot: set[2], scale: set[3] };
       return {
-        x: w * (.5 + (ra - .5) * (mobile ? .62 : .58)) - fw / 2,
+        x: w * (.5 + (ra - .5) * .58) - fw / 2,
         y: h * (.5 + (rb - .5) * .66) - fh / 2,
         rot: (ra - .5) * 17,
         scale: .74 + rb * .5,
@@ -135,9 +164,12 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
         { x: () => drift(i).x, y: () => drift(i).y, rotation: () => drift(i).rot,
           scale: () => drift(i).scale, autoAlpha: forward ? .92 : .13 },
         { x: () => wall(i).x, y: () => wall(i).y, rotation: 0, scale: 1,
+          // a phone's wall forms behind the headline, so it stays at depth
+          // until the headline has gone
+          ...(mobile ? { autoAlpha: .13 } : {}),
           duration: 4.6, ease: "power2.inOut" },
         2.4 + wave(i));
-      master.to(node, { autoAlpha: 1, duration: 1.6, ease: "power2.out" }, 5.4 + wave(i));
+      master.to(node, { autoAlpha: 1, duration: 1.6, ease: "power2.out" }, (mobile ? 7.5 : 5.4) + wave(i));
     });
     // format captions belong to the wall, not to the hero crop
     master.fromTo(select(".history-frame span"), { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.1, immediateRender: false, ease: "power2.out" }, 7);
@@ -157,7 +189,7 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
       const near = i === AD_A + 1 || i === AD_A - 1;
       master.to(node, { autoAlpha: 0, scale: .94, duration: 1.2, ease: "power2.in" }, near ? 16.2 : 15.2);
     });
-    master.to(adAEl, { x: () => w * (mobile ? .5 : .28) - fw / 2, y: () => h * (mobile ? .17 : .42) - fh / 2,
+    master.to(adAEl, { x: () => w * (mobile ? .5 : .28) - fw / 2, y: () => h * (mobile ? .5 : .42) - fh / 2,
       scale: mobile ? 1.1 : 1.35, duration: 2, ease: "power2.inOut" }, 15.2);
     master.to(adAEl, { autoAlpha: 0, duration: .6, ease: "power2.in" }, 17.4);
 
@@ -299,7 +331,7 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     master.to(select(".an-line"), { opacity: SUPPORT, duration: .8, ease: "power2.inOut" }, 43.3);
     master.to(select(".an-qual"), { opacity: .26, duration: .8, ease: "power2.inOut" }, 43.3);
     master.fromTo(select(".an-qs blockquote"), { autoAlpha: 0, y: 10 },
-      { autoAlpha: 1, y: 0, duration: .65, stagger: .18, immediateRender: false, ease: "expo.out" }, 43.5);
+      { autoAlpha: 1, y: 0, duration: .65, immediateRender: false, ease: "expo.out" }, 43.5);
     master.fromTo(select(".an-note"), { autoAlpha: 0 }, { autoAlpha: 1, duration: .6, immediateRender: false }, 44.3);
 
     // 44.9 - 45.3 · HOLD. Possible friction, stated as possible.
@@ -341,7 +373,8 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     const hypoLead = root.querySelector<HTMLElement>(".hypo-lead")!;
     const lift = () => -(hypoLead.offsetTop - (mobile ? 6 : h * .09));
     master.to(select(".hypo-why, .hypo-next"), { autoAlpha: 0, duration: .8, ease: "power2.in" }, 51.2);
-    master.to(select(".hypo-lead, .hypo-line"), { y: () => lift(), scale: .6, opacity: .55, duration: 1.4, ease: "power2.inOut" }, 51.4);
+    // at .6 scale a phone renders the eyebrow near 7px, so there it lets go
+    master.to(select(".hypo-lead, .hypo-line"), { y: () => lift(), scale: .6, opacity: (i: number) => mobile && !i ? 0 : .55, duration: 1.4, ease: "power2.inOut" }, 51.4);
     gsap.set(select(".hypo-lead, .hypo-line"), { transformOrigin: "0 0" });
     enter(select(".portfolio"), 52, 1);
     master.fromTo(select(".pf-spine"), { scaleY: 0 }, { scaleY: 1, duration: 1.4, immediateRender: false, ease: "power2.inOut" }, 52.2);
@@ -399,7 +432,6 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     // ── Phase 3 · the selected experiment becomes a finished ad ─────
     // One continuous production. The frames created here are the same objects
     // through storyboard, quality control, edit and the finished cut.
-    const stripY = () => mobile ? h * .36 : h * .28;
     enter(select(".production-brief"), 79.7, 1.3);
     master.fromTo(select(".production-brief dl > div"), { autoAlpha: 0, y: 14 },
       { autoAlpha: 1, y: 0, duration: .8, stagger: .26, immediateRender: false, ease: "expo.out" }, 80.3);
@@ -420,7 +452,13 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     // Each line leaves along the path its own frame takes, so the frame is
     // visibly the line, expanded.
     const boardPos = (i: number) => {
-      if (mobile) return { x: w * .07 + i % 3 * w * .30, y: h * .40 + Math.floor(i / 3) * h * .225, scale: Math.min(w * .245 / sw, h * .185 / sh) };
+      if (mobile) {
+        // three over two, centred, the second row between the first row's
+        // frames; frames scale about their centre, so each slot allows for it
+        const scale = Math.min(w * .245 / sw, h * .185 / sh), pitch = w * .3, row = Math.floor(i / 3);
+        const left = (w - 2 * pitch - sw * scale) / 2 + (row ? pitch / 2 : 0);
+        return { x: left + i % 3 * pitch - sw * (1 - scale) / 2, y: boardTop + row * h * .225 - sh * (1 - scale) / 2, scale };
+      }
       const scale = Math.min(w * .145 / sw, h * .43 / sh);
       return { x: w * .085 + i * w * .169, y: h * .34, scale };
     };
@@ -469,9 +507,14 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
 
     // ── approved shots → edit ───────────────────────────
     // The same frames, aligned. No second editor appears.
+    // a phone lays the five frames edge to edge across the text column
+    const strip = (i: number) => {
+      if (!mobile) return { x: w * .17 + i * w * .142, y: h * .28, scale: Math.min(w * .125 / sw, h * .25 / sh) };
+      const scale = (w * .88 - 4 * GAP) / 5 / sw;
+      return { x: w * .06 + i * (sw * scale + GAP) - sw * (1 - scale) / 2, y: stripTop - sh * (1 - scale) / 2, scale };
+    };
     shots.forEach((shot, i) => master.to(shot,
-      { x: () => w * (mobile ? .06 : .17) + i * w * (mobile ? .176 : .142), y: () => stripY(),
-        scale: () => Math.min(w * .125 / sw, h * .25 / sh), duration: 1.6, ease: "power2.inOut" }, 106.2 + i * .1));
+      { x: () => strip(i).x, y: () => strip(i).y, scale: () => strip(i).scale, duration: 1.6, ease: "power2.inOut" }, 106.2 + i * .1));
     enter(select(".edit-tracks"), 107.2, 1.1);
     // captions belong on the frames, not in a panel beside them
     master.to(select(".shot-frame figcaption"), { autoAlpha: 0, duration: .5, ease: "power2.in" }, 107.4);
@@ -482,7 +525,7 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
 
     // ── edit → one finished ad ───────────────────────────
     const finalX = () => mobile ? w / 2 - sw / 2 : w * .72 - sw / 2;
-    const finalY = () => mobile ? h * .34 : h * .22;
+    const finalY = () => mobile ? finalTop : h * .22;
     master.to(select(".sb-caption"), { autoAlpha: 0, duration: .5 }, 111.8);
     shots.forEach((shot, i) => master.to(shot, { x: finalX, y: finalY, scale: 1, duration: 1.7, ease: "power2.inOut" }, 111.9 + i * .08));
     leave(select(".edit-tracks"), 112);
@@ -537,17 +580,22 @@ export function createFilmMotion(root: HTMLElement, sequence: HTMLElement) {
     // ── the camera pulls back to the library the ad came from ───────
     // a shelf of its own: the act-2 wall does not fit beside this headline, and
     // every end value is stated so no earlier transform can survive here
-    const shelfScale = mobile ? .55 : 1;
+    // A phone centres a six-wide shelf under the headline. Slots are visual
+    // top-left corners: tiles scale about their centre, so they are offset by
+    // the shrink, while the finished ad scales from its corner.
+    const shelfTile = () => mobile ? shelfW : fw;
+    const shelfScale = () => shelfTile() / fw;
     const shelf = (i: number) => mobile
-      ? { x: w * .08 + (i % 6) * fw * .62, y: h * .34 + Math.floor(i / 6) * fh * .62 }
+      ? { x: (w - 6 * shelfW - 5 * GAP) / 2 + (i % 6) * (shelfW + GAP), y: shelfTop + Math.floor(i / 6) * (shelfW * 16 / 9 + GAP) }
       : { x: w * .50 + (i % 6) * fw * 1.13, y: h * .20 + Math.floor(i / 6) * fh * 1.08 };
     history.forEach((node, i) => master.fromTo(node, { autoAlpha: 0 },
-      { x: () => shelf(i).x, y: () => shelf(i).y, scale: shelfScale, rotation: 0, autoAlpha: .34,
+      { x: () => shelf(i).x - fw * (1 - shelfScale()) / 2, y: () => shelf(i).y - fh * (1 - shelfScale()) / 2,
+        scale: () => shelfScale(), rotation: 0, autoAlpha: .34,
         duration: 1.4, stagger: .04, immediateRender: false, ease: "power2.out" }, 136.2 + wave(i) * .3));
     // the same finished ad takes its place as the newest entry
     master.fromTo(select(".finished-video"),
       { x: () => w * (mobile ? .5 : .86), y: () => h * .26, scale: .26, autoAlpha: 0 },
-      { x: () => shelf(16).x, y: () => shelf(16).y, scale: () => fw * shelfScale / sw, autoAlpha: 1, duration: 1.8, immediateRender: false, ease: "power2.inOut" }, 137);
+      { x: () => shelf(16).x, y: () => shelf(16).y, scale: () => shelfTile() / sw, autoAlpha: 1, duration: 1.8, immediateRender: false, ease: "power2.inOut" }, 137);
     master.to(select(".finished-video > span"), { autoAlpha: 0, duration: .5, ease: "power2.in" }, 136.6);
     enter(select(".model-note"), 138.2, 1.2);
     master.fromTo(select(".mn-row"), { autoAlpha: 0, x: -12 },
