@@ -1,0 +1,6 @@
+# Not a multi-package workspace. pnpm keeps install settings in this file from
+# v10 onward, and this project needs exactly one: unrs-resolver is the native
+# resolver behind eslint-config-next's import plugin, and pnpm refuses to run a
+# dependency's install script unless it is allowed here.
+allowBuilds:
+  unrs-resolver: true
