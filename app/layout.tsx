@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
-import "./globals.css";
-import "./motion.css";
+import "./systematic.css";
 export const metadata: Metadata = {
-  title: "Resistive — Know what to test next.",
+  title: "Resistive — Your creative should compound.",
   description:
-    "A Creative R&D Engine for performance brands. Learn from what has been tested, decide what deserves testing next, and let every experiment compound.",
+    "Your ad budget is already buying data. Resistive learns from every creative, decides what deserves testing next, and turns those bets into finished ads.",
   applicationName: "Resistive",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
   openGraph: {
-    title: "Resistive — Know what to test next.",
+    title: "Resistive — Your creative should compound.",
     description:
-      "More creative is becoming easy. The hard part is knowing what is worth testing.",
+      "Every test should make the next one smarter. Build a creative system that learns.",
     type: "website",
     siteName: "Resistive",
   },
   twitter: {
     card: "summary",
-    title: "Resistive — Know what to test next.",
+    title: "Resistive — Your creative should compound.",
     description: "Creative R&D for performance brands.",
   },
 };
