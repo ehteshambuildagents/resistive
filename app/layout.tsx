@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import "./systematic.css";
 export const metadata: Metadata = {
-  title: "Resistive — Your creative should compound.",
+  title: "Resistive — Your ads should build memory.",
   description:
-    "Your ad budget is already buying data. Resistive learns from every creative, decides what deserves testing next, and turns those bets into finished ads.",
+    "You can spend a million testing ads and still start the next round guessing. Resistive turns creative experiments into lasting knowledge.",
   applicationName: "Resistive",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
   openGraph: {
-    title: "Resistive — Your creative should compound.",
+    title: "Resistive — Your ads should build memory.",
     description:
       "Every test should make the next one smarter. Build a creative system that learns.",
     type: "website",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Resistive — Your creative should compound.",
+    title: "Resistive — Your ads should build memory.",
     description: "Creative R&D for performance brands.",
   },
 };
